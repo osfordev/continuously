@@ -1,0 +1,111 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'continuously_backup_bin'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=continuously",
+                    "--package=continuously_backup_bin"
+                ],
+                "filter": {
+                    "name": "continuously",
+                    "kind": "bin"
+                }
+            },
+            // "args": [
+            //     "--help"
+            // ],
+            // "args": [
+            //     "copy-session",
+            //     "--help"
+            // ],
+            "args": [
+                "copy-session",
+                "create",
+                "--buffer-size=262144",
+                "--source-file=/Users/maxim.anurin/w-osfordev/continuously-backup/image.local.png",
+                "--destination-google-cloud-bucket-name=logical-volume-backups",
+                "--destination-google-cloud-object-name=debug/image-20250106-03.png",
+                "--destination-google-cloud-mime-type=image/png",
+                "--destination-google-cloud-service-account-json-file=/Users/maxim.anurin/w-osfordev/continuously-backup/absolute-garden-272819-d3d737919552.local.json",
+            ],
+            // "args": [
+            //     "copy-session",
+            //     "--source-google-cloud-bucket-name=logical-volume-backups",
+            //     "--source-google-cloud-object-name=debug/image-20250105-01.png",
+            //     "--source-google-cloud-mime-type=image/png",
+            //     "--source-google-cloud-service-account-json-file=/Users/maxim.anurin/w-osfordev/continuously-backup/absolute-garden-272819-d3d737919552.local.json",
+            //     "--destination-file=/Users/maxim.anurin/w-osfordev/continuously-backup/image-2.local.png",
+            // ],
+            // "args": [
+            //     "snapshot",
+            //     "--help"
+            // ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'continuously_backup_bin'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=continuously",
+                    "--package=continuously_backup_bin"
+                ],
+                "filter": {
+                    "name": "continuously",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'continuously_backup_lib'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=continuously_backup_lib"
+                ],
+                "filter": {
+                    "name": "continuously_backup_lib",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'continuously_backup_cdylib'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=continuously_backup_cdylib"
+                ],
+                "filter": {
+                    "name": "continuously_backup_cdylib",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

@@ -1,0 +1,19 @@
+[package]
+name = "continuously_backup_bin"
+authors.workspace = true
+description.workspace = true
+documentation.workspace = true
+edition.workspace = true
+version.workspace = true
+
+[[bin]]
+name = "continuously"
+path = "src/main.rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+continuously_backup_lib = { path = "../continuously_backup_lib" }
+clap = { version = "4.5.23", features = ["derive"] }
+#futures = "0.3"
+url = "2.5.4"

@@ -1,0 +1,6 @@
+continuously_backup_cdylib_usage_samples/mount.dSYM
+continuously_backup_cdylib_usage_samples/mount
+target/
+
+*.local*
+.DS_Store

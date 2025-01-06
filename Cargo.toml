@@ -1,0 +1,16 @@
+[workspace]
+
+resolver = "2"
+
+members = [
+    "continuously_backup_bin",
+    "continuously_backup_cdylib",
+    "continuously_backup_lib"
+]
+
+[workspace.package]
+version = "0.1.0"
+authors = ["maxim.anurin"]
+edition = "2021"
+description = "A short description of my package"
+documentation = "https://example.com/bar"
