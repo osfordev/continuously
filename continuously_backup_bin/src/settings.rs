@@ -1,5 +1,7 @@
 use continuously_backup_lib::{
-    blob_file_system::FileSystemBlob, blob_google_cloud::GoogleCloudBlob,
+    blob::{BlobSize, DummyBlob}, 
+    blob_file_system::FileSystemBlob, 
+    blob_google_cloud::GoogleCloudBlob,
 };
 
 #[derive(Clone, Debug)]
@@ -27,6 +29,10 @@ pub enum CommandCopySession {
 
 #[derive(Clone, Debug)]
 pub enum CommandCopySessionCreateSource {
+    Dummy{
+        blob: DummyBlob,
+        blob_size: BlobSize,
+    },
     File {
         blob: FileSystemBlob,
     },
@@ -39,6 +45,9 @@ pub enum CommandCopySessionCreateSource {
 
 #[derive(Clone, Debug)]
 pub enum CommandCopySessionCreateDestination {
+    Dummy{
+        blob: DummyBlob,
+    },
     File {
         blob: FileSystemBlob,
     },
@@ -71,7 +80,7 @@ pub fn print_usage_and_exit() -> ! {
 mod internal {
     use clap::{Args, CommandFactory, Parser, Subcommand};
     use continuously_backup_lib::{
-        blob_file_system::FileSystemBlob, blob_google_cloud::GoogleCloudBlob,
+        blob::DummyBlob, blob_file_system::FileSystemBlob, blob_google_cloud::GoogleCloudBlob
     };
 
     #[derive(Parser)]
@@ -119,6 +128,17 @@ mod internal {
     struct CliCommandCopySessionCreateSource {
         #[arg(
             long,
+            conflicts_with("source_file"),
+            conflicts_with("source_google_cloud_bucket_name"),
+            conflicts_with("source_google_cloud_object_name"),
+            conflicts_with("source_google_cloud_mime_type"),
+            conflicts_with("source_google_cloud_service_account_json_file")
+        )]
+        pub source_dummy_size: Option<u64>,
+
+        #[arg(
+            long,
+            conflicts_with("source_dummy_size"),
             conflicts_with("source_google_cloud_bucket_name"),
             conflicts_with("source_google_cloud_object_name"),
             conflicts_with("source_google_cloud_mime_type"),
@@ -128,30 +148,37 @@ mod internal {
 
         #[arg(
             long,
+            conflicts_with("source_dummy_size"),
             conflicts_with("source_file"),
             requires("source_google_cloud_object_name"),
             requires("source_google_cloud_mime_type"),
             requires("source_google_cloud_service_account_json_file")
         )]
         source_google_cloud_bucket_name: Option<String>,
+
         #[arg(
             long,
+            conflicts_with("source_dummy_size"),
             conflicts_with("source_file"),
             requires("source_google_cloud_bucket_name"),
             requires("source_google_cloud_mime_type"),
             requires("source_google_cloud_service_account_json_file")
         )]
         source_google_cloud_object_name: Option<String>,
+
         #[arg(
             long,
+            conflicts_with("source_dummy_size"),
             conflicts_with("source_file"),
             requires("source_google_cloud_bucket_name"),
             requires("source_google_cloud_object_name"),
             requires("source_google_cloud_service_account_json_file")
         )]
         source_google_cloud_mime_type: Option<String>,
+
         #[arg(
             long,
+            conflicts_with("source_dummy_size"),
             conflicts_with("source_file"),
             requires("source_google_cloud_bucket_name"),
             requires("source_google_cloud_object_name"),
@@ -162,8 +189,20 @@ mod internal {
 
     #[derive(Clone, Debug, Args)]
     struct CliCommandCopySessionCreateDestination {
+        #[clap(
+            long,
+            action,
+            conflicts_with("destination_file"),
+            conflicts_with("destination_google_cloud_bucket_name"),
+            conflicts_with("destination_google_cloud_object_name"),
+            conflicts_with("destination_google_cloud_mime_type"),
+            conflicts_with("destination_google_cloud_service_account_json_file")
+        )]
+        pub destination_dummy: bool,
+
         #[arg(
             long,
+            conflicts_with("destination_dummy"),
             conflicts_with("destination_google_cloud_bucket_name"),
             conflicts_with("destination_google_cloud_object_name"),
             conflicts_with("destination_google_cloud_mime_type"),
@@ -173,6 +212,7 @@ mod internal {
 
         #[arg(
             long,
+            conflicts_with("destination_dummy"),
             conflicts_with("destination_file"),
             requires("destination_google_cloud_object_name"),
             requires("destination_google_cloud_mime_type"),
@@ -182,6 +222,7 @@ mod internal {
 
         #[arg(
             long,
+            conflicts_with("destination_dummy"),
             conflicts_with("destination_file"),
             requires("destination_google_cloud_bucket_name"),
             requires("destination_google_cloud_mime_type"),
@@ -191,6 +232,7 @@ mod internal {
 
         #[arg(
             long,
+            conflicts_with("destination_dummy"),
             conflicts_with("destination_file"),
             requires("destination_google_cloud_bucket_name"),
             requires("destination_google_cloud_object_name"),
@@ -200,6 +242,7 @@ mod internal {
 
         #[arg(
             long,
+            conflicts_with("destination_dummy"),
             conflicts_with("destination_file"),
             requires("destination_google_cloud_bucket_name"),
             requires("destination_google_cloud_object_name"),
@@ -271,13 +314,18 @@ mod internal {
                         super::CommandCopySession::Create {
                             buffer_size: cmd_copy_session_create.buffer_size.unwrap(),
                             source: {
-                                if source.source_file.is_some() {
+                                if source.source_dummy_size.is_some() {
+                                    super::CommandCopySessionCreateSource::Dummy {
+                                        blob: DummyBlob,
+                                        blob_size:source.source_dummy_size.clone().unwrap().into(),
+                                    }
+                                } else if source.source_file.is_some() {
                                     super::CommandCopySessionCreateSource::File {
                                         blob: FileSystemBlob::new(
                                             source.source_file.clone().unwrap(),
                                         ),
                                     }
-                                } else
+                                }  else
                                 // TODO
                                 // if (source.source_google_cloud_bucket_name.is_some()
                                 //     && source.source_google_cloud_mime_type.is_some()
@@ -300,7 +348,11 @@ mod internal {
                                 }
                             },
                             destination: {
-                                if destination.destination_file.is_some() {
+                                if destination.destination_dummy {
+                                    super::CommandCopySessionCreateDestination::Dummy {
+                                        blob: DummyBlob,
+                                    }
+                                } else if destination.destination_file.is_some() {
                                     super::CommandCopySessionCreateDestination::File {
                                         blob: FileSystemBlob::new(
                                             destination.destination_file.clone().unwrap(),
@@ -398,6 +450,7 @@ mod internal {
                     let destination: &CliCommandCopySessionCreateDestination =
                         &cli_cmd_copy_session_create.destination;
 
+                    assert!(source.source_dummy_size.is_none());
                     assert!(source.source_file.is_some());
                     assert!(source.source_google_cloud_bucket_name.is_none());
                     assert!(source.source_google_cloud_mime_type.is_none());
@@ -406,6 +459,7 @@ mod internal {
                         .source_google_cloud_service_account_json_file
                         .is_none());
 
+                    assert!(destination.destination_dummy == false);
                     assert!(destination.destination_file.is_none());
                     assert!(destination.destination_google_cloud_bucket_name.is_some());
                     assert!(destination.destination_google_cloud_mime_type.is_some());
@@ -444,6 +498,62 @@ mod internal {
                             .unwrap()
                             == "/etc/continuously/absolute-garden-272819-d3d737919552.local.json"
                     );
+                } else {
+                    panic!("CliCommandCopySessionCreate was not parsed");
+                }
+            } else {
+                panic!("CliCommandCopySession was not parsed");
+            }
+        }
+
+        #[test]
+        fn should_parse_copy_session_create_file_to_dummy() {
+            let cli_result: Result<Cli, clap::error::Error> = Cli::try_parse_from([
+                "no_matter_app_name",
+                "copy-session",
+                "create",
+                "--source-file=/var/tmp/image.png",
+                "--destination-dummy",
+                ]);
+
+            assert!(cli_result.is_ok());
+
+            let cli: Cli = cli_result.unwrap();
+
+            if let CliCommand::CopySession {
+                command: cli_cmd_copy_session,
+            } = cli.command
+            {
+                if let CliCommandCopySession::Create(cli_cmd_copy_session_create) =
+                    cli_cmd_copy_session
+                {
+                    assert!(cli_cmd_copy_session_create.session_storage_url.is_none());
+
+                    let source: &CliCommandCopySessionCreateSource =
+                        &cli_cmd_copy_session_create.source;
+                    let destination: &CliCommandCopySessionCreateDestination =
+                        &cli_cmd_copy_session_create.destination;
+
+                    assert!(source.source_dummy_size.is_none());
+                    assert!(source.source_file.is_some());
+                    assert!(source.source_google_cloud_bucket_name.is_none());
+                    assert!(source.source_google_cloud_mime_type.is_none());
+                    assert!(source.source_google_cloud_object_name.is_none());
+                    assert!(source
+                        .source_google_cloud_service_account_json_file
+                        .is_none());
+
+                    assert!(destination.destination_dummy == true);
+                    assert!(destination.destination_file.is_none());
+                    assert!(destination.destination_google_cloud_bucket_name.is_none());
+                    assert!(destination.destination_google_cloud_mime_type.is_none());
+                    assert!(destination.destination_google_cloud_object_name.is_none());
+                    assert!(destination
+                        .destination_google_cloud_service_account_json_file
+                        .is_none());
+
+                    assert!(source.source_file.as_ref().unwrap() == "/var/tmp/image.png");
+
                 } else {
                     panic!("CliCommandCopySessionCreate was not parsed");
                 }

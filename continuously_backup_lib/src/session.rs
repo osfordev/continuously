@@ -1,10 +1,11 @@
 use crate::{
+    blob::{BlobSize, DummyBlob},
     blob_file_system::FileSystemBlob,
     blob_google_cloud::GoogleCloudBlob,
     storage::{BlobRead, BlobReader, BlobWrite, BlobWriter},
-    storage_file_system::{FileSystemBlobBufReader, FileSystemBlobBufWriter},
-    storage_google_cloud::{GoogleCloudBlobBufReader, GoogleCloudBlobBufWriter},
-    Stateable,
+    storage_dummy::{DummyBlobReader, DummyBlobWriter},
+    storage_file_system::{FileSystemBlobReader, FileSystemBlobWriter},
+    storage_google_cloud::{GoogleCloudBlobReader, GoogleCloudBlobWriter},
 };
 
 pub struct Session {
@@ -49,11 +50,17 @@ impl Session {
     pub fn from_state(state: &crate::state::SessionState) -> Result<Self, SessionCreateError> {
         let source_reader: Result<BlobReader, SessionCreateError> = {
             match &state.source.extra {
+                crate::state::Source::Dummy { size_bytes } => {
+                    //
+                    Ok(BlobReader::Dummy(
+                        DummyBlobReader::new(DummyBlob, (*size_bytes).into()).unwrap(),
+                    ))
+                }
                 crate::state::Source::FileSystem { size_bytes, path } => {
-                    let reader: Result<FileSystemBlobBufReader, SessionCreateError> = {
+                    let reader: Result<FileSystemBlobReader, SessionCreateError> = {
                         let file_path: String = path.to_owned();
                         let source_blob = FileSystemBlob::new(file_path);
-                        Ok(FileSystemBlobBufReader::new(source_blob).unwrap())
+                        Ok(FileSystemBlobReader::new(source_blob).unwrap())
                     };
 
                     if reader.is_err() {
@@ -83,6 +90,9 @@ impl Session {
         };
         let destination_writer: Result<BlobWriter, SessionCreateError> = {
             match &state.destination.extra {
+                crate::state::Destination::Dummy {} => {
+                    Ok(BlobWriter::Dummy(DummyBlobWriter::new(DummyBlob).unwrap()))
+                }
                 crate::state::Destination::FileSystem { size_bytes, path } => {
                     // let writer: FileSystemBlobBufWriter;
 
@@ -97,7 +107,7 @@ impl Session {
                     session_url,
                     uploaded_bytes,
                 } => {
-                    let writer_result: Result<GoogleCloudBlobBufWriter, SessionCreateError> = {
+                    let writer_result: Result<GoogleCloudBlobWriter, SessionCreateError> = {
                         let bucket_name: String = bucket_name.to_owned();
                         let object_name: String = object_name.to_owned();
 
@@ -113,12 +123,12 @@ impl Session {
                             return Err(SessionCreateError::Unknown);
                         }
 
-                        Ok(GoogleCloudBlobBufWriter::new(
+                        Ok(GoogleCloudBlobWriter::new(
                             source_blob,
                             content_mime_type,
-                            blob_size,
+                            blob_size.into(),
                             session_url.unwrap(),
-                            uploaded_bytes,
+                            uploaded_bytes.into(),
                         ))
                     };
 
@@ -147,6 +157,9 @@ impl Session {
     }
 
     pub fn process(&mut self, buffer_size: u32) -> Result<(), SessionProcessError> {
+        // std::io::copy(&mut self.source_reader, &mut self.destination_writer).unwrap();
+        // return Ok(());
+
         let buffer_size: usize = match buffer_size.try_into() {
             Err(_) => {
                 return Err(SessionProcessError::Internal(String::from(
@@ -160,18 +173,18 @@ impl Session {
 
         let source_blob_reader = &mut self.source_reader;
 
-        let source_len: u64 = source_blob_reader.len();
+        let source_len: u64 = source_blob_reader.len().into();
 
         let dest_blob_writer = &mut self.destination_writer;
 
-        let start_pos: u64 = dest_blob_writer.pos();
+        let start_pos: BlobSize = dest_blob_writer.pos();
 
         if let Err(err) = source_blob_reader.seek(start_pos) {
             return Err(SessionProcessError::Process(err.to_string()));
         }
 
-        let mut total_read = start_pos;
-        let tmp_counter = 100;
+        let mut total_read: u64 = start_pos.into();
+        let mut tmp_counter = 100;
         loop {
             let read_size: usize = match source_blob_reader.read(&mut buf) {
                 Err(err) => {
@@ -212,23 +225,25 @@ impl Session {
                 total_read, source_len, friendly_write_size
             );
 
-            if --tmp_counter == 0 {
-                return Err(SessionProcessError::Internal(String::from(
-                    "Temp counter is empty",
-                )));
-            }
+            // if --tmp_counter == 0 {
+            //     return Err(SessionProcessError::Internal(String::from(
+            //         "Temp counter is empty",
+            //     )));
+            // }
         }
         Ok(())
     }
 
     pub fn to_state(&self) -> crate::state::SessionState {
         let source: crate::state::Source = match &self.source_reader {
-            BlobReader::FileSystem(b) => b.to_state(),
-            BlobReader::GoogleCloud(b) => b.to_state(),
+            BlobReader::Dummy(b) => crate::state::Source::from(b),
+            BlobReader::FileSystem(b) => crate::state::Source::from(b),
+            BlobReader::GoogleCloud(b) => crate::state::Source::from(b),
         };
         let destination: crate::state::Destination = match &self.destination_writer {
-            BlobWriter::FileSystem(b) => b.to_state(),
-            BlobWriter::GoogleCloud(b) => b.to_state(),
+            BlobWriter::Dummy(b) => crate::state::Destination::from(b),
+            BlobWriter::FileSystem(b) => crate::state::Destination::from(b),
+            BlobWriter::GoogleCloud(b) => crate::state::Destination::from(b),
         };
         let state = crate::state::SessionState {
             source: crate::state::Extra { extra: source },

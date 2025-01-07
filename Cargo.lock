@@ -191,6 +191,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "continuously_backup_lib",
+ "log",
  "url",
 ]
 
@@ -208,6 +209,7 @@ version = "0.1.0"
 dependencies = [
  "blake2",
  "jsonwebtoken",
+ "log",
  "serde",
  "serde_json",
  "ureq",

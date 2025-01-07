@@ -1,6 +1,7 @@
-use crate::{blob_google_cloud::GoogleCloudBlob, storage::BlobRead, storage::BlobWrite};
-
-// use std::io::{BufReader, Read, Seek, Write};
+use crate::{
+    blob::BlobSize, blob_google_cloud::GoogleCloudBlob, storage::{BlobRead, BlobWrite}
+};
+use log::{debug, info, trace, warn};
 
 fn initiate_resumable_upload_session(
     blob: &GoogleCloudBlob,
@@ -19,12 +20,12 @@ fn initiate_resumable_upload_session(
 }
 
 #[derive(Debug)]
-pub struct GoogleCloudBlobBufReader {
+pub struct GoogleCloudBlobReader {
     blob: GoogleCloudBlob,
-    blob_size: u64,
-    current_position: u64,
+    blob_size: BlobSize,
+    current_position: BlobSize,
 }
-impl GoogleCloudBlobBufReader {
+impl GoogleCloudBlobReader {
     pub fn new(
         blob: GoogleCloudBlob,
         // access_token_bundle: AccessTokenBundle,
@@ -39,37 +40,37 @@ impl GoogleCloudBlobBufReader {
         // let file = std::fs::File::open(file_path).unwrap();
         // let file_size = file.metadata().unwrap().len();
         // let buf_reader: std::io::BufReader<std::fs::File> = std::io::BufReader::new(file);
-        Ok(GoogleCloudBlobBufReader {
+        Ok(GoogleCloudBlobReader {
             blob,
-            blob_size: 0,
-            current_position: 0,
+            blob_size: BlobSize::from(0u64),
+            current_position: BlobSize::from(0u64),
         })
     }
 }
 
-impl crate::Stateable<crate::state::Source> for GoogleCloudBlobBufReader {
-    fn to_state(&self) -> crate::state::Source {
+impl From<&GoogleCloudBlobReader> for crate::state::Source {
+    fn from(item: &GoogleCloudBlobReader) -> Self {
         todo!()
     }
 }
 
 #[derive(Debug)]
-pub struct GoogleCloudBlobBufWriter {
+pub struct GoogleCloudBlobWriter {
     blob: GoogleCloudBlob,
-    blob_size: u64,
-    current_position: u64,
+    blob_size: BlobSize,
+    current_position: BlobSize,
     session_url: url::Url,
     mime_type: String,
 }
-impl GoogleCloudBlobBufWriter {
+impl GoogleCloudBlobWriter {
     pub fn new(
         blob: GoogleCloudBlob,
         content_mime_type: String,
-        blob_size: u64,
+        blob_size: BlobSize,
         session_url: url::Url,
-       uploaded_bytes: u64,
+        uploaded_bytes: BlobSize,
     ) -> Self {
-        GoogleCloudBlobBufWriter {
+        GoogleCloudBlobWriter {
             session_url,
             current_position: uploaded_bytes,
             blob_size,
@@ -81,7 +82,7 @@ impl GoogleCloudBlobBufWriter {
     pub fn new_with_access_token(
         blob: GoogleCloudBlob,
         content_mime_type: String,
-        blob_size: u64,
+        blob_size: BlobSize,
         access_token_bundle: AccessTokenBundle,
     ) -> std::io::Result<Self> {
         let session_url: url::Url = initiate_resumable_upload_session(
@@ -90,9 +91,9 @@ impl GoogleCloudBlobBufWriter {
             &content_mime_type,
         );
 
-        Ok(GoogleCloudBlobBufWriter {
+        Ok(GoogleCloudBlobWriter {
             session_url,
-            current_position: 0,
+            current_position: BlobSize::from(0u64),
             blob_size,
             blob,
             mime_type: content_mime_type,
@@ -100,38 +101,43 @@ impl GoogleCloudBlobBufWriter {
     }
 }
 
-impl crate::Stateable<crate::state::Destination> for GoogleCloudBlobBufWriter {
-    fn to_state(&self) -> crate::state::Destination {
+impl From<&GoogleCloudBlobWriter> for crate::state::Destination {
+    fn from(item: &GoogleCloudBlobWriter) -> Self {
         let state = crate::state::Destination::GoogleCloud {
-            bucket_name: self.blob.get_bucket_name().to_owned(),
-            object_name: self.blob.get_object_name().to_owned(),
-            size_bytes: self.blob_size,
-            mime: self.mime_type.clone(),
-            session_url: self.session_url.as_str().to_owned(),
-            uploaded_bytes: self.current_position,
+            bucket_name: item.blob.get_bucket_name().to_owned(),
+            object_name: item.blob.get_object_name().to_owned(),
+            size_bytes: item.blob_size.clone().into(),
+            mime: item.mime_type.clone(),
+            session_url: item.session_url.as_str().to_owned(),
+            uploaded_bytes: item.current_position.clone().into(),
         };
 
         state
     }
 }
 
-impl BlobRead for GoogleCloudBlobBufReader {
-    fn len(&self) -> u64 {
+impl BlobRead for GoogleCloudBlobReader {
+    fn len(&self) -> BlobSize {
         self.blob_size
     }
 
-    fn pos(&self) -> u64 {
+    fn pos(&self) -> BlobSize {
         self.current_position
     }
 
-    fn read(&mut self, _buf: &mut [u8]) -> std::io::Result<usize> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        std::io::Read::read(self, buf)
+    }
+
+    fn seek(&mut self, _pos: BlobSize) -> std::io::Result<()> {
         Err(std::io::Error::new(
             std::io::ErrorKind::Other,
             "Not implemented yet",
         ))
     }
-
-    fn seek(&mut self, _pos: u64) -> std::io::Result<()> {
+}
+impl std::io::Read for GoogleCloudBlobReader {
+    fn read(&mut self, _buf: &mut [u8]) -> std::io::Result<usize> {
         Err(std::io::Error::new(
             std::io::ErrorKind::Other,
             "Not implemented yet",
@@ -139,32 +145,42 @@ impl BlobRead for GoogleCloudBlobBufReader {
     }
 }
 
-impl BlobWrite for GoogleCloudBlobBufWriter {
-    fn pos(&self) -> u64 {
+impl BlobWrite for GoogleCloudBlobWriter {
+    fn pos(&self) -> BlobSize {
         self.current_position
     }
 
-    fn seek(&mut self, pos: u64) -> std::io::Result<()> {
+    fn seek(&mut self, pos: BlobSize) -> std::io::Result<()> {
         // TODO: check pos range and multiplier
         self.current_position = pos;
 
         Ok(())
     }
 
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        std::io::Write::write(self, buf)
+    }
+}
+
+impl std::io::Write for GoogleCloudBlobWriter {
     fn write(&mut self, chunk: &[u8]) -> std::io::Result<usize> {
         // self.buf_writer.write(buf)
         api_upload_chunk(
             &self.session_url,
             chunk,
-            self.current_position,
-            self.blob_size,
+            self.current_position.into(),
+            self.blob_size.into(),
         )
         .unwrap();
 
-        let chunk_size: u64 = chunk.len().try_into().unwrap();
+        let chunk_size: BlobSize = chunk.len().into();
         self.current_position += chunk_size;
 
         Ok(chunk.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
     }
 }
 
@@ -572,14 +588,32 @@ pub fn api_upload_chunk(
             //
             let response_status = response.status();
             match response_status {
-                308 => Ok(ResumableUploadStatus::Pending(last_byte)),
-                200 | 201 => Ok(ResumableUploadStatus::Completed),
-                _ => Err(UploadChunkError::ApiContractViolation(format!(
-                    "Unexpected response status: {}",
-                    response_status
-                ))),
+                308 => {
+                    debug!(
+                        "api_upload_chunk successfully completed a chunk with actual blob size {}",
+                        last_byte
+                    );
+                    Ok(ResumableUploadStatus::Pending(last_byte))
+                }
+                200 | 201 => {
+                    debug!("api_upload_chunk successfully completed last chunk");
+                    Ok(ResumableUploadStatus::Completed)
+                }
+                _ => {
+                    debug!(
+                        "api_upload_chunk failed: unexpected response status {}",
+                        response_status
+                    );
+                    Err(UploadChunkError::ApiContractViolation(format!(
+                        "Unexpected response status: {}",
+                        response_status
+                    )))
+                }
             }
         }
-        Err(err) => Err(UploadChunkError::ApiInteraction(err)),
+        Err(err) => {
+            debug!("api_upload_chunk failed: {}", err.to_string());
+            Err(UploadChunkError::ApiInteraction(err))
+        }
     }
 }

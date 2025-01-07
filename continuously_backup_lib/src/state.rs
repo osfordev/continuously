@@ -1,9 +1,14 @@
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "kind")]
 pub enum Source {
+    #[serde(rename = "dummy")]
+    Dummy {
+        #[serde(rename = "dummySizeBytes")]
+        size_bytes: u64,
+    },
     #[serde(rename = "file")]
     FileSystem {
-        #[serde(rename = "fileTotalBytes")]
+        #[serde(rename = "fileSizeBytes")]
         size_bytes: u64,
         #[serde(rename = "filePath")]
         path: String,
@@ -14,7 +19,7 @@ pub enum Source {
         bucket_name: String,
         #[serde(rename = "googleCloudObjectName")]
         object_name: String,
-        #[serde(rename = "googleCloudTotalBytes")]
+        #[serde(rename = "googleCloudSizeBytes")]
         size_bytes: u64,
         #[serde(rename = "googleCloudMimeType")]
         mime: String,
@@ -28,6 +33,8 @@ pub enum Source {
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "kind")]
 pub enum Destination {
+    #[serde(rename = "dummy")]
+    Dummy {},
     #[serde(rename = "file")]
     FileSystem {
         #[serde(rename = "fileTotalBytes")]
@@ -68,23 +75,6 @@ pub struct SessionState {
 }
 
 impl SessionState {
-    // pub fn new(source: &dyn BlobReader, destination: &dyn BlobWriter) -> Self {
-    //     let s: Source;
-    //     let d: Destination;
-
-    //     if TypeId::of::<storage_google_cloud::GoogleCloudBlobBufReader>() == source.type_id() {
-    //         //
-    //     }
-
-    //     let session = Session {
-    //         content_mime_type: String::from("ddd"),
-    //         source: Extra { extra: s },
-    //         destination: Extra { extra: d },
-    //     };
-
-    //     session
-    // }
-
     pub fn println(&self) {
         let json = serde_json::to_string_pretty(&self).unwrap();
         println!("{}", json);

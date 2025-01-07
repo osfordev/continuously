@@ -1,3 +1,28 @@
+mod logging {
+    use log::{Level, LevelFilter, Metadata, Record, SetLoggerError};
+
+    struct SimpleLogger;
+
+    impl log::Log for SimpleLogger {
+        fn enabled(&self, metadata: &Metadata) -> bool {
+            true
+        }
+
+        fn log(&self, record: &Record) {
+            if self.enabled(record.metadata()) {
+                println!("{} - {}", record.level(), record.args());
+            }
+        }
+
+        fn flush(&self) {}
+    }
+
+    static LOGGER: SimpleLogger = SimpleLogger;
+
+    pub fn init() -> Result<(), SetLoggerError> {
+        log::set_logger(&LOGGER).map(|()| log::set_max_level(LevelFilter::Trace))
+    }
+}
 mod settings;
 
 use continuously_backup_lib::{
@@ -5,9 +30,10 @@ use continuously_backup_lib::{
     blob_google_cloud::GoogleCloudBlob,
     session::Session,
     storage::{BlobRead, BlobReader, BlobWrite, BlobWriter},
-    storage_file_system::{FileSystemBlobBufReader, FileSystemBlobBufWriter},
+    storage_dummy::{DummyBlobReader, DummyBlobWriter},
+    storage_file_system::{FileSystemBlobReader, FileSystemBlobWriter},
     storage_google_cloud::{
-        GoogleCloudBlobBufReader, GoogleCloudBlobBufWriter, GoogleCloudPlatformServiceAccount,
+        GoogleCloudBlobReader, GoogleCloudBlobWriter, GoogleCloudPlatformServiceAccount,
     },
 };
 use settings::{
@@ -15,6 +41,8 @@ use settings::{
 };
 
 fn main() {
+    logging::init().unwrap();
+
     let command = settings::parse();
     match command {
         settings::Command::CopySession(command_copy_session) => match command_copy_session {
@@ -132,24 +160,28 @@ impl App {
         let mut session1: continuously_backup_lib::session::Session = {
             let source_blob_reader: BlobReader = {
                 match source {
+                    CommandCopySessionCreateSource::Dummy { blob, blob_size } => {
+                        BlobReader::Dummy(DummyBlobReader::new(blob.clone(), *blob_size).unwrap())
+                    }
                     CommandCopySessionCreateSource::File { blob } => {
-                        BlobReader::FileSystem(FileSystemBlobBufReader::new(blob.clone()).unwrap())
+                        BlobReader::FileSystem(FileSystemBlobReader::new(blob.clone()).unwrap())
                     }
                     CommandCopySessionCreateSource::GoogleCloud {
                         blob,
                         service_account_json_file,
-                    } => BlobReader::GoogleCloud(
-                        GoogleCloudBlobBufReader::new(blob.clone()).unwrap(),
-                    ),
+                    } => BlobReader::GoogleCloud(GoogleCloudBlobReader::new(blob.clone()).unwrap()),
                 }
             };
 
             let destination_blob_writer: BlobWriter = {
                 match destination {
+                    CommandCopySessionCreateDestination::Dummy { blob } => {
+                        BlobWriter::Dummy(DummyBlobWriter::new(blob.clone()).unwrap())
+                    }
                     CommandCopySessionCreateDestination::File {
                         blob: destination_blob,
                     } => BlobWriter::FileSystem(
-                        FileSystemBlobBufWriter::new(destination_blob.clone()).unwrap(),
+                        FileSystemBlobWriter::new(destination_blob.clone()).unwrap(),
                     ),
                     CommandCopySessionCreateDestination::GoogleCloud {
                         blob: destination_blob,
@@ -175,9 +207,9 @@ impl App {
                         let access_token_bundle: continuously_backup_lib::storage_google_cloud::AccessTokenBundle =
                 continuously_backup_lib::storage_google_cloud::api_get_access_token(&refresh_token)
                     .unwrap();
-                        let blob_size: u64 = source_blob_reader.len();
+                        let blob_size = source_blob_reader.len();
                         BlobWriter::GoogleCloud(
-                            GoogleCloudBlobBufWriter::new_with_access_token(
+                            GoogleCloudBlobWriter::new_with_access_token(
                                 destination_blob.clone(),
                                 // String::from("image/png"),
                                 // String::from("text/plain"),
