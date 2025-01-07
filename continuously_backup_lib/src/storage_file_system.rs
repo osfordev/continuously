@@ -1,5 +1,7 @@
 use crate::{
-    blob::BlobSize, blob_file_system::FileSystemBlob, storage::{BlobRead, BlobWrite}
+    blob::BlobSize,
+    blob_file_system::FileSystemBlob,
+    storage::{BlobRead, BlobWrite},
 };
 use blake2::{Blake2b512, Digest};
 use std::io::{Read, Seek, Write};
@@ -16,7 +18,15 @@ pub struct FileSystemBlobReader {
 impl FileSystemBlobReader {
     pub fn new(blob: FileSystemBlob) -> std::io::Result<Self> {
         let file: std::fs::File = std::fs::File::open(blob.get_file_path()).unwrap();
-        let file_size: BlobSize = file.metadata().unwrap().len().into();
+
+        let file_size: BlobSize =
+        // { file.metadata().unwrap().len().into() }
+        {
+            let mut tmp_file: std::fs::File = std::fs::File::open(blob.get_file_path()).unwrap();
+            tmp_file.seek(std::io::SeekFrom::End(0)).unwrap().into()        
+        }
+        ;
+
         let buf_reader: std::io::BufReader<std::fs::File> = std::io::BufReader::new(file);
         let current_position: BlobSize = BlobSize::from(0u64);
 
