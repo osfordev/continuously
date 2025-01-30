@@ -4,7 +4,7 @@ use crate::{
     storage::{BlobRead, BlobWrite},
 };
 use blake2::{Blake2b512, Digest};
-use std::io::{Read, Seek, Write};
+use std::io::{Seek};
 
 #[derive(Debug)]
 pub struct FileSystemBlobReader {
@@ -22,8 +22,14 @@ impl FileSystemBlobReader {
         let file_size: BlobSize =
         // { file.metadata().unwrap().len().into() }
         {
+            // The OP asked how to get the size of a block device.
+            // To get the size of a block device (or any file), you can File.Seek
+            // to the end of the file using io.SeekEnd and read the position returned.
+            // - https://stackoverflow.com/a/57822606/2011679
+            // - https://unix.stackexchange.com/questions/52215/determine-the-size-of-a-block-device/52226#52226
+            // - https://stackoverflow.com/questions/2773604/query-size-of-block-device-file-in-python/2774125#2774125
             let mut tmp_file: std::fs::File = std::fs::File::open(blob.get_file_path()).unwrap();
-            tmp_file.seek(std::io::SeekFrom::End(0)).unwrap().into()        
+            tmp_file.seek(std::io::SeekFrom::End(0)).unwrap().into()
         }
         ;
 
@@ -31,7 +37,7 @@ impl FileSystemBlobReader {
         let current_position: BlobSize = BlobSize::from(0u64);
 
         // create a Blake2b512 object
-        let mut hasher = Blake2b512::new();
+        let hasher = Blake2b512::new();
 
         // // write input message
         // hasher.update(b"hello world");

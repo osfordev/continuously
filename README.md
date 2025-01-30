@@ -3,11 +3,28 @@
 ## Quick Start
 
 ```shell
+# Expected Cargo version 1.83
+cargo --version
+
 cargo build
 cargo test
-cargo run --package continuously_backup_bin -- --help
 
 cargo build --target x86_64-unknown-linux-gnu
+
+# Dry-run via Cargo
+cargo run --package continuously_backup_bin -- --help
+
+# Dry-run directly
+./target/x86_64-unknown-linux-gnu/debug/continuously --help
+
+# Real copy session sample: File System --coping--> Google Cloud Storage
+./target/x86_64-unknown-linux-gnu/debug/continuously \
+  copy-session create \
+  --source-file=/dev/vg0/luks-drone-20250106 \
+  --destination-google-cloud-bucket-name=logical-volume-backups \
+  --destination-google-cloud-object-name=dg01/vg0/luks-drone/20250106 \
+  --destination-google-cloud-mime-type=application/octet-stream \
+  --destination-google-cloud-service-account-json-file=/etc/continuously/absolute-garden-272819-d3d737919552.local.json
 ```
 
 ## Components
