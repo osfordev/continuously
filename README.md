@@ -37,7 +37,7 @@ cargo run --package continuously_backup_bin -- --help
                                │      │     │                                
               ┌────────────────┴────┐ │ ┌───┴─────────────────┐              
               │ Continuously Backup │ │ │ Continuously Backup │              
-              │  Rust Library .so   │ │ │  Rust Library Cli   │              
+              │  Shared Library .so │ │ │      Rust Cli       │              
               └─────▲───────────────┘ │ └─────────────▲───────┘              
                     │                 │               │                      
  ┌──────────────────┴───────┐  ┌──────┴───────┐  ┌────┴-───────────────────┐ 
@@ -46,8 +46,13 @@ cargo run --package continuously_backup_bin -- --help
  │                          │  │              │  │                         │ 
  └──────────────────────────┘  └──────────────┘  └─────────────────────────┘ 
                                                                              
-Created in https://asciiflow.com/
+The diagram was created in https://asciiflow.com/
 ```
+
+## References
+
+- [Google Cloud Storage OAuth 2.0 scopes](https://cloud.google.com/storage/docs/oauth-scopes)
+- [Google Cloud Storage Resumable uploads](https://cloud.google.com/storage/docs/resumable-uploads)
 
 ## Developer Notes
 
