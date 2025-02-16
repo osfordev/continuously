@@ -136,6 +136,7 @@ mod internal {
         )]
         pub source_dummy_size: Option<u64>,
 
+        /// Uses the link to file as the resource
         #[arg(
             long,
             conflicts_with("source_dummy_size"),
@@ -200,6 +201,7 @@ mod internal {
         )]
         pub destination_dummy: bool,
 
+        /// Uses a link to file as a storage location
         #[arg(
             long,
             conflicts_with("destination_dummy"),
