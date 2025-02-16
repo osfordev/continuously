@@ -137,7 +137,12 @@ impl FileSystemBlobWriter {
 
 impl From<&FileSystemBlobWriter> for crate::state::Destination {
     fn from(item: &FileSystemBlobWriter) -> Self {
-        todo!()
+        let state = crate::state::Destination::FileSystem { 
+            size_bytes: item.current_position.clone().into(),
+            path: item.blob.get_file_path().to_owned(),
+        };
+
+        state
     }
 }
 
