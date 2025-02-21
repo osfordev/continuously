@@ -136,7 +136,7 @@ mod internal {
         )]
         pub source_dummy_size: Option<u64>,
 
-        /// Uses the link to file as the resource
+        /// Use local (or block device) file as source blob
         #[arg(
             long,
             conflicts_with("source_dummy_size"),
@@ -201,7 +201,7 @@ mod internal {
         )]
         pub destination_dummy: bool,
 
-        /// Uses a link to file as a storage location
+        /// Use local (or block device) file as destination blob
         #[arg(
             long,
             conflicts_with("destination_dummy"),
