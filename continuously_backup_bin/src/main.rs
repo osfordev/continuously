@@ -180,9 +180,15 @@ impl App {
                     }
                     CommandCopySessionCreateDestination::File {
                         blob: destination_blob,
-                    } => BlobWriter::FileSystem(
-                        FileSystemBlobWriter::new(destination_blob.clone()).unwrap(),
-                    ),
+                        mime_type,
+                    } => {
+                    let blob_size = source_blob_reader.len();
+                    BlobWriter::FileSystem(
+                        FileSystemBlobWriter::new(destination_blob.clone(), 
+                        mime_type.clone(),
+                        blob_size,)
+                        .unwrap(),
+                    )}
                     CommandCopySessionCreateDestination::GoogleCloud {
                         blob: destination_blob,
                         mime_type,

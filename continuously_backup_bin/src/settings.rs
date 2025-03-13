@@ -50,6 +50,7 @@ pub enum CommandCopySessionCreateDestination {
     },
     File {
         blob: FileSystemBlob,
+        mime_type: String,
     },
     GoogleCloud {
         blob: GoogleCloudBlob,
@@ -215,6 +216,14 @@ mod internal {
         #[arg(
             long,
             conflicts_with("destination_dummy"),
+            conflicts_with("destination_google_cloud_bucket_name"),
+            requires("destination_file")
+        )]
+        pub destination_file_mime_type: Option<String>,
+
+        #[arg(
+            long,
+            conflicts_with("destination_dummy"),
             conflicts_with("destination_file"),
             requires("destination_google_cloud_object_name"),
             requires("destination_google_cloud_mime_type"),
@@ -359,6 +368,7 @@ mod internal {
                                         blob: FileSystemBlob::new(
                                             destination.destination_file.clone().unwrap(),
                                         ),
+                                        mime_type: destination.destination_file_mime_type.clone().unwrap(),
                                     }
                                 } else
                                 // TODO

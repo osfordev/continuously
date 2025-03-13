@@ -93,7 +93,7 @@ impl Session {
                 crate::state::Destination::Dummy {} => {
                     Ok(BlobWriter::Dummy(DummyBlobWriter::new(DummyBlob).unwrap()))
                 }
-                crate::state::Destination::FileSystem { size_bytes, path } => {
+                crate::state::Destination::FileSystem { size_bytes, path , mime , uploaded_bytes} => {
                     // let writer: FileSystemBlobBufWriter;
 
                     // BlobWriter::FileSystem(writer)

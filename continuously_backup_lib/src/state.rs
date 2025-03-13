@@ -41,6 +41,10 @@ pub enum Destination {
         size_bytes: u64,
         #[serde(rename = "filePath")]
         path: String,
+        #[serde(rename = "fileMimeType")]
+        mime: String,
+        #[serde(rename = "fileUploadedBytes")]
+        uploaded_bytes: u64,
     },
     #[serde(rename = "googleCloud")]
     GoogleCloud {

@@ -98,9 +98,14 @@ pub struct FileSystemBlobWriter {
     buf_writer: std::io::BufWriter<std::fs::File>,
     current_position: BlobSize,
     blob: FileSystemBlob,
+    mime_type: String,
 }
 impl FileSystemBlobWriter {
-    pub fn new(blob: FileSystemBlob) -> std::io::Result<Self> {
+    pub fn new(
+        blob: FileSystemBlob,  
+        content_mime_type: String,         
+        uploaded_bytes: BlobSize,
+    ) -> std::io::Result<Self> {
         let mut file = match std::fs::File::create(blob.get_file_path()) {
             std::io::Result::Ok(f) => f,
             std::io::Result::Err(e) => {
@@ -131,6 +136,7 @@ impl FileSystemBlobWriter {
             blob,
             buf_writer,
             current_position,
+            mime_type: content_mime_type,
         })
     }
 }
@@ -139,6 +145,8 @@ impl From<&FileSystemBlobWriter> for crate::state::Destination {
     fn from(item: &FileSystemBlobWriter) -> Self {
         let state = crate::state::Destination::FileSystem { 
             size_bytes: item.current_position.clone().into(),
+            uploaded_bytes: item.current_position.clone().into(),
+            mime: item.mime_type.clone(),
             path: item.blob.get_file_path().to_owned(),
         };
 
